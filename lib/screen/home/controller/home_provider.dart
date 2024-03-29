@@ -1,15 +1,17 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'dart:typed_data';
-
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+final homeProvider =
+    ChangeNotifierProvider<HomeProvider>((ref) => HomeProvider());
+
 class HomeProvider extends ChangeNotifier {
+  bool isLoading = false;
+  bool isSearching = false;
   Uint8List? imageData;
   TextEditingController textController = TextEditingController();
-
-  bool isLoading = false;
-  bool searchChanging = false;
 
   void loadingUpdate(bool val) {
     isLoading = val;
@@ -17,26 +19,26 @@ class HomeProvider extends ChangeNotifier {
   }
 
   void searchUpdate(bool val) {
-    searchChanging = val;
+    isSearching = val;
     notifyListeners();
   }
 
-  Future<void> textToImage() async {
-    String engine_id = "stable-diffusion-v1-6";
-    String api_host = "https://api.stability.ai";
-    String api_key = "sk-5rA7XPq5gGZcsT39renT7LH9Ulh7Town21KmWXBawL6GFXFF";
-
+  Future<dynamic> textToImage(String prompt, BuildContext context) async {
+    String engineId = "stable-diffusion-v1-6";
+    String apiHost = "https://api.stability.ai";
+    String apiKey = "sk-5rA7XPq5gGZcsT39renT7LH9Ulh7Town21KmWXBawL6GFXFF";
+    debugPrint(prompt);
     final response = await http.post(
-        Uri.parse("$api_host/v1/generation/$engine_id/text-to-image"),
+        Uri.parse("$apiHost/v1/generation/$engineId/text-to-image"),
         headers: {
           "Content-Type": "application/json",
           "Accept": "image/png",
-          "Authorization": "Bearer $api_key"
+          "Authorization": "Bearer $apiKey"
         },
         body: jsonEncode(
           {
             "text_prompts": [
-              {"text": textController, "weight": 1}
+              {"text": prompt, "weight": 1}
             ],
             "cfg_scale": 7,
             "height": 1024,
@@ -47,12 +49,17 @@ class HomeProvider extends ChangeNotifier {
         ));
 
     if (response.statusCode == 200) {
-      imageData = response.bodyBytes;
-      loadingUpdate(false);
-      searchUpdate(true);
-      notifyListeners();
+      try {
+        debugPrint(response.statusCode.toString());
+        imageData = response.bodyBytes;
+        loadingUpdate(true);
+        searchUpdate(false);
+        notifyListeners();
+      } on Exception {
+        debugPrint("failed to generate image");
+      }
     } else {
-      print(response.statusCode.toString());
+      debugPrint("failed to generate image");
     }
   }
 }

@@ -1,18 +1,33 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:text_to_image/screen/home/controller/home_provider.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+// ignore: must_be_immutable
+class HomeScreen extends ConsumerWidget {
+  HomeScreen({super.key});
+  TextEditingController textController = TextEditingController();
 
   @override
-  Widget build(BuildContext context) {
-    final homeProvider = Provider.of<HomeProvider>(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fWatch = ref.watch(homeProvider);
+    final fRead = ref.read(homeProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFF212121),
+      appBar: AppBar(
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        title: Text(
+          "Text to Image",
+          style: TextStyle(
+              fontSize: 22,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontFamily: GoogleFonts.openSans().fontFamily),
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 25),
@@ -21,68 +36,58 @@ class HomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  "Text to Image",
-                  style: TextStyle(
-                      fontSize: 28,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: GoogleFonts.openSans().fontFamily),
-                ),
                 const SizedBox(
                   height: 30,
                 ),
-                Consumer<HomeProvider>(
-                  builder: (context, provider, child) {
-                    return provider.searchChanging == true
-                        ? Container(
-                            height: 320,
-                            width: 320,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF424242),
-                              border: Border.all(color: Colors.white, width: 2),
-                              borderRadius: BorderRadius.circular(12),
+                fWatch.isLoading == true
+                    ? Container(
+                        height: 320,
+                        width: 320,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF424242),
+                          border: Border.all(color: Colors.white, width: 2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.memory(
+                            fWatch.imageData!,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      )
+                    : Container(
+                        height: 320,
+                        width: 320,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF424242),
+                          border: Border.all(color: Colors.white, width: 2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.image_outlined,
+                              color: Colors.grey[400],
+                              size: 50,
                             ),
-                            child: Consumer<HomeProvider>(
-                              builder: (context, provider, child) {
-                                return Image.memory(provider.imageData!);
-                              },
+                            const SizedBox(
+                              height: 20,
                             ),
-                          )
-                        : Container(
-                            height: 320,
-                            width: 320,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF424242),
-                              border: Border.all(color: Colors.white, width: 2),
-                              borderRadius: BorderRadius.circular(12),
+                            Text(
+                              "No Image is generated yet.",
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily:
+                                      GoogleFonts.openSans().fontFamily),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.image_outlined,
-                                  color: Colors.grey[400],
-                                  size: 50,
-                                ),
-                                const SizedBox(
-                                  height: 20,
-                                ),
-                                Text(
-                                  "No Image is generated yet.",
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w500,
-                                      fontFamily:
-                                          GoogleFonts.openSans().fontFamily),
-                                ),
-                              ],
-                            ),
-                          );
-                  },
-                ),
+                          ],
+                        ),
+                      ),
                 const SizedBox(
                   height: 20,
                 ),
@@ -95,17 +100,17 @@ class HomeScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: TextField(
-                    controller: homeProvider.textController,
+                    controller: textController,
                     maxLines: 5,
                     style: TextStyle(
                         fontSize: 14,
                         color: Colors.white,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         fontFamily: GoogleFonts.openSans().fontFamily),
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       hintText: "Enter your prompt here...",
-                      contentPadding: EdgeInsets.all(20),
+                      contentPadding: const EdgeInsets.all(20),
                       hintStyle: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[400],
@@ -122,8 +127,8 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     GestureDetector(
                       onTap: () {
-                        homeProvider.textToImage();
-                        homeProvider.loadingUpdate(true);
+                        fRead.textToImage(textController.text, context);
+                        fRead.searchUpdate(true);
                       },
                       child: Container(
                           height: 60,
@@ -139,28 +144,24 @@ class HomeScreen extends StatelessWidget {
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               )),
-                          child: Consumer<HomeProvider>(
-                            builder: (context, provider, child) {
-                              return provider.isLoading == false
-                                  ? Text(
-                                      "Generate",
-                                      style: TextStyle(
-                                          fontSize: 18,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: GoogleFonts.openSans()
-                                              .fontFamily),
-                                    )
-                                  : const CircularProgressIndicator(
+                          child: fWatch.isSearching == false
+                              ? Text(
+                                  "Generate",
+                                  style: TextStyle(
+                                      fontSize: 18,
                                       color: Colors.white,
-                                    );
-                            },
-                          )),
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily:
+                                          GoogleFonts.openSans().fontFamily),
+                                )
+                              : const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )),
                     ),
                     GestureDetector(
                       onTap: () {
-                        homeProvider.searchUpdate(false);
-                        homeProvider.textController.clear();
+                        fRead.loadingUpdate(false);
+                        textController.clear();
                       },
                       child: Container(
                         height: 60,
